@@ -90,9 +90,5 @@ Route::prefix('auth')->group(function () {
     // ─────────────────────────────
     // 🌐 THIRD-PARTY LOGIN (GOOGLE)
     // ─────────────────────────────
-    Route::prefix('google')->group(function () {
-        Route::get('/redirect', [SocialAuthController::class, 'redirectToGoogle']);
-        Route::get('/callback', [SocialAuthController::class, 'handleGoogleCallback']);
-        Route::post('/', [SocialAuthController::class, 'handleGoogleCallback']); // Flutter ezt használja
-    });
+        Route::post('/google', [SocialAuthController::class, 'handleGoogle']);
 });

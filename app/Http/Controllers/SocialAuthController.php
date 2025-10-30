@@ -2,62 +2,50 @@
 
 namespace App\Http\Controllers;
 
-use Laravel\Socialite\Facades\Socialite;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Google\Client as GoogleClient;
 
 class SocialAuthController extends Controller
 {
-    // 🔹 Google login redirect (Flutternek nem kell, de teszteléshez hasznos)
-    public function redirectToGoogle()
+    public function handleGoogle(Request $request)
     {
-        return Socialite::driver('google')->stateless()->redirect();
-    }
+        $request->validate([
+            'token' => 'required|string',
+        ]);
 
-    // 🔹 Google callback (Flutter ezt hívja tokennel)
-    public function handleGoogleCallback(Request $request)
-    {
-        try {
-            // Ha Flutter küldi a token-t (preferred)
-            if ($request->has('token')) {
-                $googleUser = Socialite::driver('google')->stateless()->userFromToken($request->token);
-            } else {
-                // Ha böngészőből hívod a redirect után
-                $googleUser = Socialite::driver('google')->stateless()->user();
-            }
+        $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID_ANDROID')]); // 🔹 Android-kliens ID
+        $payload = $client->verifyIdToken($request->token);
 
-            // Megnézzük, létezik-e a user
-            $user = User::where('email', $googleUser->getEmail())->first();
-
-            // Ha nem, létrehozzuk
-            if (! $user) {
-                $user = User::create([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'email_verified_at' => now(),
-                    'password' => Hash::make(Str::random(16)),
-                ]);
-            }
-
-            // Laravel Sanctum token létrehozása
-            $token = $user->createToken('auth_token')->plainTextToken;
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Sikeres Google bejelentkezés.',
-                'data' => [
-                    'user' => $user,
-                    'token' => $token,
-                ],
-            ]);
-        } catch (\Throwable $e) {
+        if (!$payload) {
             return response()->json([
                 'success' => false,
-                'message' => 'Google hitelesítés sikertelen.',
-                'error' => $e->getMessage(),
-            ], 500);
+                'message' => 'Érvénytelen Google token.',
+            ], 401);
         }
+
+        $email = $payload['email'];
+        $name  = $payload['name'] ?? explode('@', $email)[0];
+
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name'     => $name,
+                'email_verified_at' => now(),
+                'password' => bcrypt(str()->random(12)),
+            ]
+        );
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sikeres Google bejelentkezés',
+            'data' => [
+                'user'  => $user,
+                'token' => $token,
+            ],
+        ]);
     }
 }
