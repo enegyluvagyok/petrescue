@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\Admin\UserApprovalController;
 use App\Models\User;
 
 /*
@@ -90,6 +91,12 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/devices', [AuthController::class, 'listDevices']);
         Route::post('/devices/revoke', [AuthController::class, 'revokeDevice']);
+    });
+
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::get('/users/pending', [UserApprovalController::class, 'pending']);
+        Route::post('/users/{id}/approve', [UserApprovalController::class, 'approve']);
+        Route::post('/users/{id}/reject', [UserApprovalController::class, 'reject']);
     });
 
     // ─────────────────────────────

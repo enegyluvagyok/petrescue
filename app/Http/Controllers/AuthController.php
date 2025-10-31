@@ -25,6 +25,7 @@ class AuthController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
+                'is_approved' => false,
             ]);
 
             // 🔹 Küldjük el az email verification linket
@@ -32,7 +33,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sikeres regisztráció! Kérlek, erősítsd meg az e-mailedet a küldött linken.',
+                'message' => 'Sikeres regisztráció! Kérlek, erősítsd meg az e-mailedet a küldött linken, majd várj az adminisztrátori jóváhagyásra.',
                 'data' => [
                     'user' => $user,
                 ],
@@ -74,6 +75,14 @@ class AuthController extends Controller
 
             if (! $user->hasVerifiedEmail()) {
                 return response()->json(['success' => false, 'message' => 'Erősítsd meg az e-mailedet előbb.'], 403);
+            }
+
+            if (! $user->is_approved) {
+                return response()->json([
+                    'success' => false,
+                    'message' =>
+                        'A fiók regisztrációja folyamatban van. Kérlek, várj, amíg az adminisztrátor jóváhagyja.',
+                ], 403);
             }
 
             // 🔹 Tokent NEM töröljük mostantól

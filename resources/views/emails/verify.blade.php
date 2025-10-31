@@ -21,7 +21,7 @@
 <body>
 <div class="container">
   <h2>Üdv, {{ $user->name }}!</h2>
-  <p>Kérjük, erősítsd meg az e-mail címed a lenti gombbal:</p>
+  <p>Kérjük, erősítsd meg az e-mail címed a lenti gombbal, majd várd az adminisztrátor jóváhagyását:</p>
   <a href="{{ $verifyUrl }}" class="button">Email megerősítése</a>
   <p style="margin-top:20px;font-size:14px;color:#555;">
     Ha nem te regisztráltál, ezt az üzenetet figyelmen kívül hagyhatod.
