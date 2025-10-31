@@ -27,6 +27,6 @@
     Ha nem te kérted, semmi teendőd nincs.
   </p>
 </div>
-<footer>PetRescue • {{ now()->format('Y') }}</footer>
+<footer>Hadház Szeku • {{ now()->format('Y') }}</footer>
 </body>
 </html>

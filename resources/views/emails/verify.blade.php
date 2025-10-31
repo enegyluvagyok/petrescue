@@ -27,6 +27,6 @@
     Ha nem te regisztráltál, ezt az üzenetet figyelmen kívül hagyhatod.
   </p>
 </div>
-<footer>PetRescue • {{ now()->format('Y') }}</footer>
+<footer>Hadház Szeku • {{ now()->format('Y') }}</footer>
 </body>
 </html>
