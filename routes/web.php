@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Providers\AuthServiceProvider;
 use Illuminate\Support\Facades\Log;
 
-Route::get('/', fn() => view('welcome'));
+Route::get('/', function () {
+    return view('welcome');
+});
 
 // /r/{type}/{encodedUrl}
 Route::get('/r/{type}/{encoded}', function (string $type, string $encoded) {

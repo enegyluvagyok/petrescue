@@ -87,6 +87,11 @@ Route::prefix('auth')->group(function () {
         });
     });
 
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/devices', [AuthController::class, 'listDevices']);
+        Route::post('/devices/revoke', [AuthController::class, 'revokeDevice']);
+    });
+
     // ─────────────────────────────
     // 🌐 THIRD-PARTY LOGIN (GOOGLE)
     // ─────────────────────────────

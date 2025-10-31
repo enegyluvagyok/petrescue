@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
+use App\Models\Device;
 use Throwable;
 
 class AuthController extends Controller
@@ -59,33 +60,38 @@ class AuthController extends Controller
             $validated = $request->validate([
                 'email' => 'required|email',
                 'password' => 'required|string',
+                'device_uuid' => 'required|string',
+                'platform' => 'nullable|string',
+                'device_name' => 'nullable|string',
+                'push_token' => 'nullable|string',
             ]);
 
             $user = User::where('email', $validated['email'])->first();
 
-            // 🔹 Hibás email vagy jelszó
             if (! $user || ! Hash::check($validated['password'], $user->password)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Hibás email vagy jelszó.',
-                    'errors' => ['email' => ['Hibás email vagy jelszó.']],
-                ], 401);
+                return response()->json(['success' => false, 'message' => 'Hibás email vagy jelszó.'], 401);
             }
 
-            // 🔹 Ellenőrizzük, hogy az e-mail megerősítve van-e
             if (! $user->hasVerifiedEmail()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Kérlek, erősítsd meg az e-mail címedet, mielőtt bejelentkezel.',
-                    'errors' => ['email' => ['A fiók még nincs megerősítve.']],
-                ], 403);
+                return response()->json(['success' => false, 'message' => 'Erősítsd meg az e-mailedet előbb.'], 403);
             }
 
-            // 🔹 (Opcionális) régi tokenek törlése, hogy mindig csak 1 aktív legyen
-            $user->tokens()->delete();
+            // 🔹 Tokent NEM töröljük mostantól
+            $token = $user->createToken('mobile')->plainTextToken;
 
-            // 🔹 Új token generálása
-            $token = $user->createToken('auth_token')->plainTextToken;
+            // 🔹 Eszköz frissítés vagy létrehozás
+            $device = Device::updateOrCreate(
+                ['user_id' => $user->id, 'device_uuid' => $validated['device_uuid']],
+                [
+                    'name' => $validated['device_name'] ?? 'Ismeretlen eszköz',
+                    'platform' => $validated['platform'] ?? 'unknown',
+                    'push_token' => $validated['push_token'] ?? null,
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'revoked' => false,
+                    'last_active_at' => now(),
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -93,20 +99,11 @@ class AuthController extends Controller
                 'data' => [
                     'user' => $user,
                     'token' => $token,
+                    'device' => $device,
                 ],
             ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Hibásan megadott adatok.',
-                'errors' => $e->errors(),
-            ], 422);
         } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Szerverhiba történt a bejelentkezés során.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Szerverhiba', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -120,22 +117,40 @@ class AuthController extends Controller
         ]);
     }
 
+    public function listDevices(Request $request)
+    {
+        $devices = $request->user()->devices()->get();
+        return response()->json(['success' => true, 'data' => $devices]);
+    }
+
+    public function revokeDevice(Request $request)
+    {
+        $request->validate(['device_uuid' => 'required|string']);
+        $updated = Device::where('user_id', $request->user()->id)
+            ->where('device_uuid', $request->device_uuid)
+            ->update(['revoked' => true]);
+        return response()->json(['success' => (bool) $updated]);
+    }
+
     // 🔹 Kijelentkezés
     public function logout(Request $request)
     {
         try {
+            $deviceUuid = $request->input('device_uuid');
+
+            // Token törlése
             $request->user()->currentAccessToken()->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Sikeresen kijelentkeztél.',
-            ]);
+            // Eszköz "revoked" jelölés
+            if ($deviceUuid) {
+                Device::where('user_id', $request->user()->id)
+                    ->where('device_uuid', $deviceUuid)
+                    ->update(['revoked' => true, 'last_active_at' => now()]);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Sikeresen kijelentkezve.']);
         } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Szerverhiba történt kijelentkezés közben.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Szerverhiba kijelentkezés közben.'], 500);
         }
     }
 }
