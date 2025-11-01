@@ -3,6 +3,12 @@
 use Illuminate\Support\Facades\Route;
 use App\Providers\AuthServiceProvider;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\AppBuildController;
+
+Route::get('/builds', [AppBuildController::class, 'index'])->name('builds.index');
+Route::post('/builds', [AppBuildController::class, 'store'])->name('builds.store');
+Route::get('/builds/{build}/download', [AppBuildController::class, 'download'])->name('builds.download');
+Route::delete('/builds/{build}', [AppBuildController::class, 'destroy'])->name('builds.destroy');
 
 Route::get('/', function () {
     return view('welcome');
