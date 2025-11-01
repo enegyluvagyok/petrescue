@@ -23,12 +23,26 @@ class AppBuildController extends Controller
             'build_type' => 'nullable|string|max:20',
         ]);
 
-        // Feltöltés storage-ba
+        // 📦 Fájl beolvasása
         $file = $request->file('apk');
-        $path = $file->store('public/apks');
-        $fileName = basename($path);
 
-        // Mentés DB-be
+        // 🧩 Eredeti név és kiterjesztés megőrzése
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        // Biztonsági okból csak .apk-t engedünk ténylegesen
+        if (!in_array($extension, ['apk'])) {
+            return back()->with('error', '❌ Csak .apk fájl tölthető fel!');
+        }
+
+        // 🕒 Verziózott fájlnév generálása
+        $timestamp = now()->format('Y-m-d_His');
+        $fileName = "{$originalName}_{$timestamp}.{$extension}";
+
+        // 🗂️ Mentés storage-ba
+        $path = $file->storeAs('public/apks', $fileName);
+
+        // 🧾 Mentés adatbázisba
         AppBuild::create([
             'file_name' => $fileName,
             'original_name' => $file->getClientOriginalName(),
@@ -37,19 +51,35 @@ class AppBuildController extends Controller
             'build_type' => $request->input('build_type', 'release'),
         ]);
 
-        return redirect()->route('builds.index')->with('success', '✅ APK sikeresen feltöltve!');
+        return redirect()
+            ->route('builds.index')
+            ->with('success', "✅ APK sikeresen feltöltve: {$fileName}");
     }
 
     public function download(AppBuild $build)
     {
-        return Storage::download("public/apks/{$build->file_name}", $build->original_name);
+        $filePath = "public/apks/{$build->file_name}";
+
+        if (!Storage::exists($filePath)) {
+            return back()->with('error', '❌ A fájl nem található a szerveren.');
+        }
+
+        return Storage::download(
+            $filePath,
+            $build->original_name,
+            ['Content-Type' => 'application/vnd.android.package-archive']
+        );
     }
 
     public function destroy(AppBuild $build)
     {
-        Storage::delete("public/apks/{$build->file_name}");
+        $filePath = "public/apks/{$build->file_name}";
+        if (Storage::exists($filePath)) {
+            Storage::delete($filePath);
+        }
+
         $build->delete();
 
-        return back()->with('success', '🗑️ Build törölve!');
+        return back()->with('success', "🗑️ {$build->original_name} törölve!");
     }
 }
