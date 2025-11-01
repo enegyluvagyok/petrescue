@@ -21,11 +21,16 @@
 <body>
 <div class="container">
   <h2>Üdv, {{ $user->name }}!</h2>
-  <p>Kérjük, erősítsd meg az e-mail címed a lenti gombbal, majd várd az adminisztrátor jóváhagyását:</p>
-  <a href="{{ $verifyUrl }}" class="button">Email megerősítése</a>
-  <p style="margin-top:20px;font-size:14px;color:#555;">
-    Ha nem te regisztráltál, ezt az üzenetet figyelmen kívül hagyhatod.
-  </p>
+    <p>Kérjük, erősítsd meg az e-mail címed a lenti gombbal, majd várd az adminisztrátor jóváhagyását:</p>
+       <a href="{{ $fallbackUrl }}"
+        style="display:inline-block;padding:12px 24px;background:#4365ff;color:white;border-radius:8px;text-decoration:none"
+        target="_blank">
+        Email megerősítése
+        </a>
+        <p style="margin-top:8px;font-size:12px">
+            Ha mobilon nem működik, kattints ide:
+            <a href="{{ $fallbackUrl }}" target="_blank" style="color:#0f1a1f;">Webes megerősítés</a>
+        </p>
 </div>
 <footer>Hadház Szeku • {{ now()->format('Y') }}</footer>
 </body>

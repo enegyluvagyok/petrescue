@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\Admin\UserApprovalController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Models\User;
 
 /*
@@ -76,16 +77,37 @@ Route::prefix('auth')->group(function () {
     // 🔑 PASSWORD RESET
     // ─────────────────────────────
     Route::prefix('password')->group(function () {
-        Route::post('/forgot', [PasswordResetController::class, 'forgot']);
-        Route::post('/reset', [PasswordResetController::class, 'reset']);
-        Route::get('/reset/confirm', function (Request $request) {
+
+        Route::post('/forgot',function (Request $request) {
+            $request->validate(['email' => 'required|email']);
+
+            $status = Password::sendResetLink($request->only('email'));
+
             return response()->json([
-                'success' => true,
-                'message' => 'A jelszó visszaállítási link érvényes.',
-                'email' => $request->query('email'),
-                'token' => $request->query('token'),
+                'success' => $status === Password::RESET_LINK_SENT,
+                'message' => __($status),
             ]);
         });
+
+        Route::post('/reset', function (Request $request) {
+                $request->validate([
+                    'email' => 'required|email',
+                    'token' => 'required',
+                    'password' => 'required|min:8|confirmed',
+                ]);
+
+                $status = Password::reset(
+                    $request->only('email', 'password', 'password_confirmation', 'token'),
+                    function ($user, $password) {
+                        $user->forceFill(['password' => Hash::make($password)])->save();
+                    }
+                );
+
+                return response()->json([
+                    'success' => $status === Password::PASSWORD_RESET,
+                    'message' => __($status),
+                ]);
+            });
     });
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -100,7 +122,31 @@ Route::prefix('auth')->group(function () {
     });
 
     // ─────────────────────────────
-    // 🌐 THIRD-PARTY LOGIN (GOOGLE)
+    // 🌐 E-MAIL VERIFICATION FROM APP
     // ─────────────────────────────
-        Route::post('/google', [SocialAuthController::class, 'handleGoogle']);
+    Route::post('/email/verify-app', function (Request $request) {
+        $token = $request->input('token');
+        $user = User::whereRaw("SHA1(email) = ?", [$token])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hibás verifikációs link.',
+            ], 400);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'E-mail már korábban megerősítve.',
+            ]);
+        }
+
+        $user->markEmailAsVerified();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'E-mail sikeresen megerősítve!',
+        ]);
+    });
 });

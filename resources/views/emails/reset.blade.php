@@ -20,12 +20,17 @@
 </head>
 <body>
 <div class="container">
-  <h2>Jelszó visszaállítás</h2>
-  <p>Valaki jelszó-visszaállítást kért a fiókodhoz.</p>
-  <a href="{{ $resetUrl }}" class="button">Új jelszó beállítása</a>
-  <p style="margin-top:20px;font-size:14px;color:#555;">
-    Ha nem te kérted, semmi teendőd nincs.
-  </p>
+  <h2>Üdv, {{ $user->name }}!</h2>
+    <p>Az alábbi linken változtathatod meg a jelszavad:</p>
+       <a href="{{ $fallbackUrl }}"
+        style="display:inline-block;padding:12px 24px;background:#4365ff;color:white;border-radius:8px;text-decoration:none"
+        target="_blank">
+        Email megerősítése
+        </a>
+        <p style="margin-top:8px;font-size:12px">
+            Ha mobilon nem működik, kattints ide:
+            <a href="{{ $fallbackUrl }}" target="_blank" style="color:#0f1a1f;">Webes jelszóváltoztatás</a>
+        </p>
 </div>
 <footer>Hadház Szeku • {{ now()->format('Y') }}</footer>
 </body>

@@ -11,26 +11,39 @@ class AuthServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        // 📬 Verify Email
+
         VerifyEmail::toMailUsing(function ($notifiable, $url) {
-            $shortUrl = self::shortenUrl($url, 'verify');
+            $emailHash = sha1($notifiable->getEmailForVerification());
+
+            $mobileUrl = "hadhazszeku://verify?token={$emailHash}";
+            $webUrl = url("/r/verify/{$emailHash}");
+
             return (new MailMessage)
                 ->subject('📬 Email-cím megerősítése')
                 ->view('emails.verify', [
                     'user' => $notifiable,
-                    'verifyUrl' => $shortUrl,
+                    'verifyUrl' => $mobileUrl,
+                    'fallbackUrl' => $webUrl,
                 ]);
         });
 
-        // 🔑 Reset Password
         ResetPassword::toMailUsing(function ($notifiable, $token) {
-            $url = url("/api/auth/password/reset/confirm?email={$notifiable->email}&token={$token}");
-            $shortUrl = self::shortenUrl($url, 'reset');
+            $payload = [
+                'token' => $token,
+                'email' => $notifiable->email,
+            ];
+
+            $encoded = self::urlSafeEncode($payload);
+
+            $mobileUrl = "hadhazszeku://reset?token={$token}&email={$notifiable->email}";
+            $fallbackUrl = url("/r/reset/{$encoded}");
+
             return (new MailMessage)
                 ->subject('🔑 Jelszó visszaállítása')
                 ->view('emails.reset', [
                     'user' => $notifiable,
-                    'resetUrl' => $shortUrl,
+                    'resetUrl' => $mobileUrl,
+                    'fallbackUrl' => $fallbackUrl,
                 ]);
         });
     }
@@ -52,5 +65,16 @@ class AuthServiceProvider extends ServiceProvider
     {
         $decoded = base64_decode(strtr($encoded, '-_', '+/'));
         return $decoded ?: '/';
+    }
+
+    public static function urlSafeEncode(array $data): string
+    {
+        return rtrim(strtr(base64_encode(json_encode($data)), '+/', '-_'), '=');
+    }
+
+    public static function urlSafeDecode(string $data): ?array
+    {
+        $decoded = base64_decode(strtr($data, '-_', '+/'));
+        return json_decode($decoded, true);
     }
 }
