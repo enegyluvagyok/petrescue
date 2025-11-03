@@ -25,7 +25,7 @@
        <a href="{{ $fallbackUrl }}"
         style="display:inline-block;padding:12px 24px;background:#4365ff;color:white;border-radius:8px;text-decoration:none"
         target="_blank">
-        Email megerősítése
+        Jelszó megváltoztatása
         </a>
         <p style="margin-top:8px;font-size:12px">
             Ha mobilon nem működik, kattints ide:
