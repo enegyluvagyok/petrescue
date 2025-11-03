@@ -38,20 +38,7 @@ class UserProfileController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        // 🔹 camelCase → snake_case konverzió
-        $snakeCased = [];
-        foreach ($request->all() as $key => $value) {
-            $snakeKey = strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $key));
-            $snakeCased[$snakeKey] = $value;
-        }
-        $request->merge($snakeCased);
-
-        // 🔹 Meta rekord lekérése vagy létrehozása
-        $meta = $user->meta ?: new UserMeta();
-        $meta->user_id = $user->id;
-
-        // 🔹 Mezők kitöltése
-        $meta->fill($request->only([
+        $allowed = [
             'birth_place',
             'mother_name',
             'birth_date',
@@ -65,14 +52,19 @@ class UserProfileController extends Controller
             'id_card_number',
             'taj_number',
             'tax_id',
-        ]));
+        ];
 
-        // 🔹 Profilkép feltöltése (PUT-nál is működik)
+        // 🔹 Csak az engedélyezett mezőket vesszük
+        $data = collect($request->all())->only($allowed)->toArray();
+
+        // 🔹 Meta előkészítés
+        $meta = $user->meta ?? new UserMeta(['user_id' => $user->id]);
+
+        // 🔹 Feltöltés
+        $meta->fill($data);
+
+        // 🔹 Avatar kezelése
         if ($request->hasFile('avatar')) {
-            if ($meta->avatar_path && Storage::disk('public')->exists($meta->avatar_path)) {
-                Storage::disk('public')->delete($meta->avatar_path);
-            }
-
             $path = $request->file('avatar')->store('avatars', 'public');
             $meta->avatar_path = $path;
         }
@@ -82,10 +74,8 @@ class UserProfileController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profil sikeresen frissítve.',
-            'meta' => $meta->fresh(),
-            'avatar_url' => $meta->avatar_path
-                ? asset('storage/' . $meta->avatar_path)
-                : null,
+            'meta' => $meta,
+            'avatar_url' => $meta->avatar_path ? asset('storage/' . $meta->avatar_path) : null,
         ]);
     }
 }
