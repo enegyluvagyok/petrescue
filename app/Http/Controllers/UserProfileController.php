@@ -42,6 +42,7 @@ class UserProfileController extends Controller
         'birth_place',
         'mother_name',
         'birth_date',
+        'phone',
         'postal_code',
         'city',
         'street_name',
