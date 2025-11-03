@@ -9,14 +9,9 @@ use Illuminate\Support\Facades\Storage;
 
 class UserProfileController extends Controller
 {
-    public function show($id)
+    public function show()
     {
-        if (isset($id)){
-            $user = \App\Models\User::with('meta')->find($id);
-        }
-        else {
-            $user = Auth::user();
-        }
+        $user = Auth::user()?->load('meta');
 
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
@@ -33,10 +28,8 @@ class UserProfileController extends Controller
                     ? asset('storage/' . $user->meta->avatar_path)
                     : null,
             ],
-
         ]);
     }
-
 
     public function update(Request $request)
     {
