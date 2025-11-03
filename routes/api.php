@@ -9,7 +9,7 @@ require __DIR__ . '/api/auth.php';
 // Ide jöhetnek más modulok (pl. devices, admin, tests, stb.)
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user/profile', [UserProfileController::class, 'show']);
+    Route::get('/user/profile/{id)', [UserProfileController::class, 'show', 'id']);
     Route::put('/user/profile', [UserProfileController::class, 'update']);
 });
 
