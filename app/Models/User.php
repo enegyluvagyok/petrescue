@@ -22,7 +22,23 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'phone',
+        'avatar_path',
+        'birth_place',
+        'mother_name',
+        'birth_date',
+        'zip_code',
+        'city',
+        'street_name',
+        'street_type',
+        'house_number',
+        'floor',
+        'door',
+        'id_card_number',
+        'taj_number',
+        'tax_id',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -45,6 +61,11 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function meta()
+    {
+        return $this->hasOne(UserMeta::class, 'user_id', 'id');
     }
 
     public function devices()
