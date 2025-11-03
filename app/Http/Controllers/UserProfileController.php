@@ -31,51 +31,82 @@ class UserProfileController extends Controller
         ]);
     }
 
-    public function update(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
+ public function update(Request $request)
+{
+    $user = Auth::user();
+    if (!$user) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
 
-        $allowed = [
-            'birth_place',
-            'mother_name',
-            'birth_date',
-            'postal_code',
-            'city',
-            'street_name',
-            'street_type',
-            'house_number',
-            'floor',
-            'door',
-            'id_card_number',
-            'taj_number',
-            'tax_id',
-        ];
+    $allowed = [
+        'birth_place',
+        'mother_name',
+        'birth_date',
+        'postal_code',
+        'city',
+        'street_name',
+        'street_type',
+        'house_number',
+        'floor',
+        'door',
+        'id_card_number',
+        'taj_number',
+        'tax_id',
+    ];
 
-        // 🔹 Csak az engedélyezett mezőket vesszük
-        $data = collect($request->all())->only($allowed)->toArray();
+    $data = collect($request->all())->only($allowed)->toArray();
 
-        // 🔹 Meta előkészítés
-        $meta = $user->meta ?? new UserMeta(['user_id' => $user->id]);
+    $meta = $user->meta ?? new UserMeta(['user_id' => $user->id]);
+    $meta->fill($data);
 
-        // 🔹 Feltöltés
-        $meta->fill($data);
+    // 🔹 Avatar kezelése biztonságosan
+    if ($request->hasFile('avatar')) {
+        try {
+            $file = $request->file('avatar');
 
-        // 🔹 Avatar kezelése
-        if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
+            if (!$file->isValid()) {
+                throw new \Exception('A feltöltött fájl érvénytelen.');
+            }
+
+            $path = $file->store('avatars', 'public');
+            if (!$path) {
+                throw new \Exception('Nem sikerült menteni az avatart.');
+            }
+
             $meta->avatar_path = $path;
-        }
+        } catch (\Throwable $e) {
+            \Log::error('Avatar feltöltési hiba: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
 
+            return response()->json([
+                'success' => false,
+                'message' => 'Avatar mentési hiba: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    try {
         $meta->save();
+    } catch (\Throwable $e) {
+        \Log::error('Meta mentési hiba: ' . $e->getMessage(), [
+            'user_id' => $user->id,
+            'data' => $data,
+        ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Profil sikeresen frissítve.',
-            'meta' => $meta,
-            'avatar_url' => $meta->avatar_path ? asset('storage/' . $meta->avatar_path) : null,
-        ]);
+            'success' => false,
+            'message' => 'Meta mentése sikertelen: ' . $e->getMessage(),
+        ], 500);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Profil sikeresen frissítve.',
+        'meta' => $meta,
+        'avatar_url' => $meta->avatar_path ? asset('storage/' . $meta->avatar_path) : null,
+    ]);
+}
+
 }
