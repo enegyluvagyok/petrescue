@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\SystemFlagController;
 
 // Minden auth-modul betöltése
 require __DIR__ . '/api/auth.php';
@@ -32,3 +33,11 @@ Route::middleware('auth:sanctum')->get('/users', function () {
             ]),
     ]);
 });
+
+
+// restart érték lekérdezés
+Route::get('/restart', [SystemFlagController::class, 'getRestart']);
+
+// restart mód beállítása (0 vagy 1)
+Route::post('/restart/{value}', [SystemFlagController::class, 'setRestart'])
+    ->where('value', '[01]');
